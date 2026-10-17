@@ -1,0 +1,2553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04050b">
+<meta name="description" content="An ultra-interactive, particle-powered countdown to contract expiry.">
+<title>Contract Expiry // Ultra Instinct</title>
+
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #04050b;
+  --accent: 190;
+  --a: hsl(var(--accent), 100%, 70%);
+  --a2: hsl(calc(var(--accent) + 70), 100%, 72%);
+  --glow: hsla(var(--accent), 100%, 65%, .20);
+  --text: #f5f8ff;
+  --muted: #7c87a1;
+  --line: rgba(190, 215, 255, .12);
+  --panel: rgba(8, 12, 23, .77);
+  --ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--bg);
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  position: relative;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(30, 53, 92, .16), transparent 50%),
+    radial-gradient(ellipse at 15% 90%, rgba(55, 24, 87, .12), transparent 42%),
+    #04050b;
+  font-family: Inter, "SF Pro Display", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 1s ease;
+}
+
+body.ultra-mode {
+  --line: rgba(206, 239, 255, .23);
+  --panel: rgba(5, 10, 22, .70);
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(89, 153, 255, .15), transparent 46%),
+    radial-gradient(ellipse at 50% 100%, rgba(183, 115, 255, .10), transparent 45%),
+    #03040a;
+}
+
+button {
+  font: inherit;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 4px;
+}
+
+#universe {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.ambient {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(88vw, 900px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsla(var(--accent), 100%, 55%, .075), transparent 65%);
+  filter: blur(38px);
+  transition: background 1s ease;
+}
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: .075;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(150, 195, 255, .12) 4px
+  );
+  mix-blend-mode: screen;
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, .50) 100%);
+}
+
+body.ultra-mode .scanlines {
+  opacity: .12;
+}
+
+body.ultra-mode .ambient {
+  filter: blur(23px);
+  background: radial-gradient(circle, rgba(123, 208, 255, .12), rgba(157, 100, 255, .055) 40%, transparent 70%);
+}
+
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: max(22px, env(safe-area-inset-top)) clamp(17px, 4vw, 54px) 15px;
+}
+
+.brand {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: rgba(235, 243, 255, .8);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.brand-symbol {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--a);
+  font-size: 17px;
+  border: 1px solid hsla(var(--accent), 100%, 70%, .45);
+  background: hsla(var(--accent), 100%, 65%, .07);
+  box-shadow: 0 0 22px var(--glow), inset 0 0 10px var(--glow);
+  transform: rotate(45deg);
+  border-radius: 7px;
+}
+
+.brand-symbol span {
+  transform: rotate(-45deg);
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 13px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca8c0;
+  font: 9px "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #78ffd1;
+  box-shadow: 0 0 12px #78ffd1;
+  animation: blink 1.5s infinite;
+}
+
+.top-button,
+.action-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+  color: #dce9ff;
+  background: rgba(15, 24, 42, .68);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition:
+    color .25s,
+    border-color .25s,
+    background .25s,
+    box-shadow .25s,
+    transform .25s var(--ease);
+}
+
+.top-button:hover,
+.action-button:hover {
+  border-color: hsla(var(--accent), 100%, 72%, .56);
+  background: hsla(var(--accent), 90%, 40%, .12);
+}
+
+.top-button:active,
+.action-button:active {
+  transform: scale(.96);
+}
+
+.pause-button {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+  font-size: 13px;
+}
+
+main {
+  min-height: 100vh;
+  min-height: 100svh;
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 73px 15px 63px;
+}
+
+.console {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 880px);
+  padding: clamp(23px, 4.5vw, 42px) clamp(15px, 4.3vw, 42px) 22px;
+  border: 1px solid var(--line);
+  border-radius: 25px;
+  background:
+    linear-gradient(138deg, rgba(150, 200, 255, .045), transparent 40%),
+    linear-gradient(320deg, rgba(160, 100, 255, .025), transparent 45%),
+    var(--panel);
+  box-shadow:
+    0 30px 110px rgba(0, 0, 0, .48),
+    inset 0 1px 0 rgba(255, 255, 255, .055),
+    0 0 70px hsla(var(--accent), 100%, 55%, .04);
+  backdrop-filter: blur(23px);
+  -webkit-backdrop-filter: blur(23px);
+  animation: console-enter .8s var(--ease) both;
+}
+
+.console::before,
+.console::after {
+  content: "";
+  position: absolute;
+  width: 65px;
+  height: 65px;
+  pointer-events: none;
+  opacity: .7;
+}
+
+.console::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid var(--a);
+  border-left: 1px solid var(--a);
+  border-radius: 25px 0 0;
+}
+
+.console::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 1px solid var(--a);
+  border-bottom: 1px solid var(--a);
+  border-radius: 0 0 25px;
+}
+
+body.ultra-mode .console {
+  border-color: rgba(155, 224, 255, .28);
+  box-shadow:
+    0 30px 120px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .08),
+    0 0 110px rgba(99, 196, 255, .10);
+}
+
+.top-ornament {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--a), transparent);
+  box-shadow: 0 0 20px var(--a);
+}
+
+.pre-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin-bottom: 15px;
+  color: var(--a);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .34em;
+  text-transform: uppercase;
+}
+
+.pre-title::before,
+.pre-title::after {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+  opacity: .65;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(36px, 7vw, 68px);
+  font-weight: 580;
+  line-height: 1.06;
+  letter-spacing: -.075em;
+  text-align: center;
+  color: #f6f8ff;
+}
+
+h1 .thin {
+  font-weight: 300;
+  color: rgba(215, 229, 255, .81);
+}
+
+body.ultra-mode h1 {
+  text-shadow: 0 0 35px rgba(123, 208, 255, .18);
+}
+
+.subtitle {
+  margin: 13px 0 22px;
+  text-align: center;
+  color: #8995af;
+  font-size: 12px;
+  letter-spacing: .035em;
+}
+
+.date-chip {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 28px;
+  padding: 10px 15px;
+  border: 1px solid rgba(184, 213, 255, .13);
+  border-radius: 100px;
+  background: rgba(130, 170, 255, .035);
+  color: #a9b8d3;
+  font: 10px "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .14em;
+}
+
+.date-symbol {
+  color: var(--a);
+}
+
+.timer {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(6px, 1.5vw, 13px);
+}
+
+.time-unit {
+  position: relative;
+  min-width: 0;
+  min-height: 121px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  padding: 15px 2px 12px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 215, 255, .105);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .035), transparent 90%),
+    rgba(11, 17, 31, .58);
+  cursor: pointer;
+  transition:
+    transform .25s var(--ease),
+    border-color .25s,
+    background .25s,
+    box-shadow .25s;
+}
+
+.time-unit::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 19%;
+  right: 19%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--a), transparent);
+  opacity: .5;
+}
+
+.time-unit::after {
+  content: "";
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  top: 15%;
+  left: 15%;
+  background: radial-gradient(ellipse, hsla(var(--accent), 100%, 70%, .045), transparent 72%);
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+
+.time-unit:hover,
+.time-unit:focus-visible {
+  transform: translateY(-3px);
+  border-color: hsla(var(--accent), 100%, 70%, .48);
+  box-shadow: 0 8px 30px var(--glow);
+}
+
+.time-unit:hover::after,
+.time-unit:focus-visible::after {
+  opacity: 1;
+}
+
+.number-wrap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: clamp(43px, 8vw, 72px);
+  place-items: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.number {
+  color: #f4f7ff;
+  font: 400 clamp(31px, 7.4vw, 68px)/1 "SFMono-Regular", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.085em;
+  text-shadow: 0 0 26px hsla(var(--accent), 100%, 80%, .11);
+  will-change: transform, opacity;
+}
+
+.number.animate {
+  animation: number-flip .32s var(--ease);
+}
+
+.unit-label {
+  position: relative;
+  z-index: 1;
+  margin-top: 11px;
+  color: #75839f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.time-unit .tiny-index {
+  position: absolute;
+  top: 9px;
+  left: 11px;
+  color: rgba(183, 202, 237, .24);
+  font: 8px "SFMono-Regular", Consolas, monospace;
+}
+
+.system-panel {
+  margin-top: 25px;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+  color: #8592ad;
+  font: 9px "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.panel-heading strong {
+  color: var(--a);
+  font-weight: 600;
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(200, 220, 255, .075);
+}
+
+.track-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, hsla(var(--accent), 100%, 56%, .55), var(--a));
+  box-shadow: 0 0 13px var(--a);
+  transition: width .6s ease;
+}
+
+.energy-row {
+  display: grid;
+  grid-template-columns: auto minmax(60px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 17px;
+}
+
+.energy-label {
+  color: #7f8aa5;
+  font: 8px "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+
+.energy-track {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(200, 220, 255, .08);
+}
+
+.energy-fill {
+  width: 7%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #657aff, #82fff0, #fff);
+  box-shadow: 0 0 15px #8bf9ff;
+  transition: width .12s linear;
+}
+
+.energy-value {
+  min-width: 46px;
+  color: #a7c8e8;
+  text-align: right;
+  font: 9px "SFMono-Regular", Consolas, monospace;
+}
+
+body.ultra-mode .energy-fill {
+  background: linear-gradient(90deg, #b8b8ff, #80edff, #fff);
+  box-shadow: 0 0 19px #90efff;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.action-button {
+  min-height: 46px;
+  padding: 0 9px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.mode-button {
+  color: var(--a);
+  border-color: hsla(var(--accent), 95%, 68%, .30);
+  background: hsla(var(--accent), 80%, 40%, .075);
+}
+
+.mode-button[aria-pressed="true"] {
+  color: #071018;
+  background: linear-gradient(100deg, #9afaff, #eee8ff);
+  border-color: #c0f7ff;
+  box-shadow: 0 0 30px rgba(125, 219, 255, .20);
+}
+
+.burst-button {
+  color: #f3eaff;
+  border-color: rgba(188, 142, 255, .32);
+  background: linear-gradient(110deg, rgba(120, 85, 255, .10), rgba(80, 210, 255, .075));
+}
+
+.burst-button .burst-symbol {
+  display: inline-block;
+  margin-right: 6px;
+  color: #b9faff;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 21px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(190, 215, 255, .075);
+  color: #5f6c86;
+  font: 9px "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.live-clock {
+  color: #9eacc7;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.footer-separator {
+  color: var(--a);
+}
+
+.bottom-hint {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: max(15px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: max-content;
+  max-width: calc(100% - 28px);
+  color: #69758f;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.hint-symbol {
+  color: var(--a);
+  font-size: 13px;
+}
+
+.corner {
+  position: absolute;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  opacity: .4;
+  pointer-events: none;
+}
+
+.corner.tl {
+  top: 16%;
+  left: 3.5%;
+  border-top: 1px solid var(--a);
+  border-left: 1px solid var(--a);
+}
+
+.corner.tr {
+  top: 16%;
+  right: 3.5%;
+  border-top: 1px solid var(--a);
+  border-right: 1px solid var(--a);
+}
+
+.corner.bl {
+  bottom: 15%;
+  left: 3.5%;
+  border-bottom: 1px solid var(--a);
+  border-left: 1px solid var(--a);
+}
+
+.corner.br {
+  bottom: 15%;
+  right: 3.5%;
+  border-bottom: 1px solid var(--a);
+  border-right: 1px solid var(--a);
+}
+
+.expired-message {
+  display: none;
+  margin-top: 21px;
+  color: var(--a);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.expired .expired-message {
+  display: block;
+}
+
+.expired .time-unit {
+  opacity: .38;
+  filter: grayscale(.6);
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 23px;
+  z-index: 20;
+  transform: translate(-50%, 14px);
+  padding: 10px 15px;
+  color: #d9faff;
+  border: 1px solid rgba(127, 229, 255, .28);
+  border-radius: 9px;
+  background: rgba(5, 14, 28, .94);
+  box-shadow: 0 0 30px rgba(85, 210, 255, .12);
+  font: 9px "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .12em;
+  text-align: center;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+body.motion-paused #universe {
+  opacity: .55;
+}
+
+body.motion-paused .ambient {
+  opacity: .35;
+}
+
+body.ultra-mode .status-dot {
+  background: #a3f3ff;
+  box-shadow: 0 0 14px #a3f3ff;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .42; }
+}
+
+@keyframes console-enter {
+  from { opacity: 0; transform: translateY(15px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes number-flip {
+  0% { opacity: .3; transform: translateY(7px); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes ultra-flash {
+  0% { filter: brightness(1); }
+  25% { filter: brightness(1.75); }
+  100% { filter: brightness(1); }
+}
+
+body.overdrive .console {
+  animation: ultra-flash .7s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body {
+    cursor: crosshair;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding-left: 14px;
+    padding-right: 14px;
+    gap: 8px;
+  }
+
+  .brand {
+    font-size: 8px;
+    letter-spacing: .1em;
+    gap: 8px;
+  }
+
+  .brand-symbol {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+
+  .top-right {
+    gap: 7px;
+  }
+
+  .connection-status {
+    gap: 5px;
+    font-size: 7px;
+    letter-spacing: .035em;
+  }
+
+  .top-button {
+    min-height: 37px;
+    padding: 0 9px;
+    font-size: 8px;
+    letter-spacing: .055em;
+  }
+
+  .pause-button {
+    width: 37px;
+    min-width: 37px;
+    padding: 0;
+  }
+
+  main {
+    padding: 68px 10px 59px;
+  }
+
+  .console {
+    padding: 29px 12px 17px;
+    border-radius: 20px;
+  }
+
+  .console::before,
+  .console::after {
+    width: 32px;
+    height: 32px;
+    border-radius: 0;
+  }
+
+  .pre-title {
+    margin-bottom: 13px;
+    font-size: 8px;
+    letter-spacing: .24em;
+  }
+
+  .subtitle {
+    font-size: 10px;
+    margin: 10px 0 20px;
+  }
+
+  .date-chip {
+    margin-bottom: 21px;
+    padding: 9px 12px;
+    gap: 8px;
+    font-size: 9px;
+    letter-spacing: .09em;
+  }
+
+  .timer {
+    gap: 5px;
+  }
+
+  .time-unit {
+    min-height: 100px;
+    padding: 13px 1px 10px;
+    border-radius: 10px;
+  }
+
+  .time-unit .tiny-index {
+    top: 6px;
+    left: 6px;
+    font-size: 7px;
+  }
+
+  .unit-label {
+    font-size: 7px;
+    letter-spacing: .1em;
+    margin-top: 9px;
+  }
+
+  .system-panel {
+    margin-top: 21px;
+  }
+
+  .panel-heading {
+    font-size: 8px;
+    letter-spacing: .06em;
+  }
+
+  .energy-row {
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .energy-label,
+  .energy-value {
+    font-size: 7px;
+  }
+
+  .energy-label {
+    letter-spacing: .065em;
+  }
+
+  .energy-value {
+    min-width: 40px;
+  }
+
+  .actions {
+    margin-top: 18px;
+    gap: 7px;
+  }
+
+  .action-button {
+    min-height: 44px;
+    font-size: 8px;
+    letter-spacing: .045em;
+  }
+
+  .footer {
+    margin-top: 17px;
+    padding-top: 12px;
+    font-size: 8px;
+    letter-spacing: .045em;
+  }
+
+  .bottom-hint {
+    font-size: 8px;
+    letter-spacing: .08em;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .corner {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .connection-status {
+    display: none;
+  }
+
+  .timer {
+    gap: 4px;
+  }
+
+  .time-unit {
+    min-height: 89px;
+  }
+
+  .number {
+    font-size: 28px;
+  }
+
+  .action-button {
+    font-size: 7px;
+    padding: 0 4px;
+  }
+
+  .date-chip {
+    font-size: 8px;
+    gap: 6px;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 601px) {
+  main {
+    padding-top: 56px;
+    padding-bottom: 45px;
+  }
+
+  .console {
+    padding-top: 24px;
+    padding-bottom: 16px;
+  }
+
+  .subtitle {
+    margin: 8px 0 15px;
+  }
+
+  .date-chip {
+    margin-bottom: 17px;
+  }
+
+  .time-unit {
+    min-height: 92px;
+  }
+
+  .system-panel {
+    margin-top: 19px;
+  }
+
+  .actions {
+    margin-top: 16px;
+  }
+
+  .footer {
+    margin-top: 15px;
+    padding-top: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+</head>
+
+<body>
+<canvas id="universe" aria-hidden="true"></canvas>
+<div class="ambient" aria-hidden="true"></div>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<div class="corner tl" aria-hidden="true"></div>
+<div class="corner tr" aria-hidden="true"></div>
+<div class="corner bl" aria-hidden="true"></div>
+<div class="corner br" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-symbol"><span>✳</span></span>
+    <span>Temporal Reactor</span>
+  </div>
+
+  <div class="top-right">
+    <div class="connection-status">
+      <span class="status-dot"></span>
+      <span id="status-label">System online</span>
+    </div>
+
+    <button
+      type="button"
+      class="top-button pause-button"
+      id="pause-button"
+      aria-label="Pause particle animations"
+      aria-pressed="false"
+      title="Pause or resume the particle field"
+    >Ⅱ</button>
+  </div>
+</header>
+
+<main>
+  <section class="console" id="console" aria-labelledby="title">
+    <div class="top-ornament" aria-hidden="true"></div>
+
+    <div class="pre-title" id="mode-label">Temporal countdown sequence</div>
+
+    <h1 id="title">Contract <span class="thin">Expiry</span></h1>
+
+    <p class="subtitle" id="subtitle">
+      One deadline. Infinite possibilities.
+    </p>
+
+    <div class="date-chip">
+      <span class="date-symbol">◈</span>
+      <span>09 DEC 2026</span>
+      <span>/</span>
+      <span>00:00:00</span>
+      <span>/</span>
+      <span>LOCAL TIME</span>
+    </div>
+
+    <div class="timer" id="timer">
+      <button class="time-unit" type="button" data-unit="days" aria-label="Days remaining. Activate energy pulse.">
+        <span class="tiny-index">01</span>
+        <span class="number-wrap"><span class="number" id="days">000</span></span>
+        <span class="unit-label">Days</span>
+      </button>
+
+      <button class="time-unit" type="button" data-unit="hours" aria-label="Hours remaining. Activate energy pulse.">
+        <span class="tiny-index">02</span>
+        <span class="number-wrap"><span class="number" id="hours">00</span></span>
+        <span class="unit-label">Hours</span>
+      </button>
+
+      <button class="time-unit" type="button" data-unit="minutes" aria-label="Minutes remaining. Activate energy pulse.">
+        <span class="tiny-index">03</span>
+        <span class="number-wrap"><span class="number" id="minutes">00</span></span>
+        <span class="unit-label">Minutes</span>
+      </button>
+
+      <button class="time-unit" type="button" data-unit="seconds" aria-label="Seconds remaining. Activate energy pulse.">
+        <span class="tiny-index">04</span>
+        <span class="number-wrap"><span class="number" id="seconds">00</span></span>
+        <span class="unit-label">Seconds</span>
+      </button>
+    </div>
+
+    <div class="expired-message" id="expired-message">
+      The next chapter begins now.
+    </div>
+
+    <section class="system-panel" aria-label="Contract timeline progress">
+      <div class="panel-heading">
+        <span>Timeline synchronization</span>
+        <strong id="progress-text">CALIBRATING</strong>
+      </div>
+
+      <div
+        class="track"
+        id="progress-track"
+        role="progressbar"
+        aria-label="Elapsed contract timeline"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div class="track-fill" id="progress-fill"></div>
+      </div>
+
+      <div class="energy-row">
+        <span class="energy-label">ENERGY CHARGE</span>
+        <div class="energy-track">
+          <div class="energy-fill" id="energy-fill"></div>
+        </div>
+        <span class="energy-value" id="energy-value">07%</span>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="action-button mode-button"
+        id="mode-button"
+        aria-pressed="false"
+      >✧ Activate Ultra Instinct</button>
+
+      <button
+        type="button"
+        class="action-button burst-button"
+        id="burst-button"
+      ><span class="burst-symbol">◉</span>Release Energy Burst</button>
+    </div>
+
+    <footer class="footer">
+      <span id="timezone-label">LOCAL TIME</span>
+      <div class="footer-right">
+        <span class="footer-separator">●</span>
+        <span class="live-clock" id="live-clock">00:00:00</span>
+      </div>
+    </footer>
+  </section>
+</main>
+
+<div class="bottom-hint" id="bottom-hint">
+  <span class="hint-symbol">✧</span>
+  <span>Touch · Drag · Hold to charge · Release to detonate</span>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ============================================================
+     CONFIGURATION
+     Deadline uses the browser's local timezone.
+     No external libraries, services, or requests.
+     ============================================================ */
+
+  const TARGET = new Date(2026, 11, 9, 0, 0, 0, 0).getTime();
+
+  // Used only for the timeline progress indicator.
+  const CONTRACT_START = new Date(2024, 11, 4, 0, 0, 0, 0).getTime();
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const coarsePointer = window.matchMedia("(pointer: coarse)");
+
+  const $ = id => document.getElementById(id);
+
+  const ui = {
+    days: $("days"),
+    hours: $("hours"),
+    minutes: $("minutes"),
+    seconds: $("seconds"),
+    clock: $("live-clock"),
+    timezone: $("timezone-label"),
+    status: $("status-label"),
+    modeLabel: $("mode-label"),
+    subtitle: $("subtitle"),
+    progress: $("progress-fill"),
+    progressText: $("progress-text"),
+    progressTrack: $("progress-track"),
+    energy: $("energy-fill"),
+    energyValue: $("energy-value"),
+    modeButton: $("mode-button"),
+    burstButton: $("burst-button"),
+    pauseButton: $("pause-button"),
+    console: $("console"),
+    timer: $("timer"),
+    toast: $("toast"),
+    hint: $("bottom-hint"),
+    canvas: $("universe")
+  };
+
+  const numberElements = {
+    days: ui.days,
+    hours: ui.hours,
+    minutes: ui.minutes,
+    seconds: ui.seconds
+  };
+
+  const previous = {};
+
+  let countdownExpired = false;
+  let countdownInterval = 0;
+  let toastTimeout = 0;
+
+  /* ============================================================
+     COUNTDOWN
+     ============================================================ */
+
+  function localClock(date) {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }).format(date);
+  }
+
+  function updateTimezone() {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local Time";
+    ui.timezone.textContent = zone.split("/").pop().replaceAll("_", " ").toUpperCase();
+  }
+
+  function setNumber(key, value) {
+    if (previous[key] === value) return;
+
+    previous[key] = value;
+    const node = numberElements[key];
+    node.textContent = value;
+
+    if (!reducedMotion.matches) {
+      node.classList.remove("animate");
+      void node.offsetWidth;
+      node.classList.add("animate");
+    }
+  }
+
+  function updateCountdown() {
+    const now = Date.now();
+    const date = new Date(now);
+    const difference = TARGET - now;
+
+    ui.clock.textContent = localClock(date);
+
+    if (difference <= 0) {
+      setNumber("days", "000");
+      setNumber("hours", "00");
+      setNumber("minutes", "00");
+      setNumber("seconds", "00");
+
+      if (!countdownExpired) {
+        countdownExpired = true;
+        ui.console.classList.add("expired");
+        ui.status.textContent = "Deadline reached";
+        showToast("Deadline reached. Your next chapter begins.");
+        choosePalette("white");
+        emitBurst(innerWidth / 2, innerHeight / 2, 1.3);
+      }
+
+      ui.progress.style.width = "100%";
+      ui.progressText.textContent = "100.00%";
+      ui.progressTrack.setAttribute("aria-valuenow", "100");
+      return;
+    }
+
+    const totalSeconds = Math.floor(difference / 1000);
+
+    setNumber("days", String(Math.floor(totalSeconds / 86400)).padStart(3, "0"));
+    setNumber("hours", String(Math.floor(totalSeconds % 86400 / 3600)).padStart(2, "0"));
+    setNumber("minutes", String(Math.floor(totalSeconds % 3600 / 60)).padStart(2, "0"));
+    setNumber("seconds", String(totalSeconds % 60).padStart(2, "0"));
+
+    ui.console.classList.remove("expired");
+
+    const span = TARGET - CONTRACT_START;
+    const elapsed = now - CONTRACT_START;
+    const percent = span > 0 ? Math.max(0, Math.min(100, elapsed / span * 100)) : 0;
+
+    ui.progress.style.width = percent.toFixed(4) + "%";
+    ui.progressText.textContent = percent.toFixed(2) + "%";
+    ui.progressTrack.setAttribute("aria-valuenow", percent.toFixed(2));
+  }
+
+  updateTimezone();
+  updateCountdown();
+
+  countdownInterval = window.setInterval(updateCountdown, 200);
+
+  /* ============================================================
+     USER FEEDBACK
+     ============================================================ */
+
+  function showToast(message) {
+    ui.toast.textContent = message;
+    ui.toast.classList.add("visible");
+
+    window.clearTimeout(toastTimeout);
+    toastTimeout = window.setTimeout(() => {
+      ui.toast.classList.remove("visible");
+    }, 1800);
+  }
+
+  /* ============================================================
+     CANVAS ENGINE
+     ============================================================ */
+
+  const canvas = ui.canvas;
+  const ctx = canvas.getContext("2d", {
+    alpha: true,
+    desynchronized: true
+  });
+
+  if (!ctx) {
+    ui.status.textContent = "Countdown online";
+    return;
+  }
+
+  const engine = {
+    width: 0,
+    height: 0,
+    dpr: 1,
+
+    particles: [],
+    waves: [],
+    sparks: [],
+
+    running: true,
+    visible: !document.hidden,
+    reduced: reducedMotion.matches,
+    ultra: false,
+
+    baseCount: 110,
+    hue: 190,
+    targetHue: 190,
+    lastPaletteTime: 0,
+    lastFrame: 0,
+    frameCount: 0,
+    raf: 0,
+
+    energy: 7,
+    pointer: {
+      x: -1000,
+      y: -1000,
+      px: -1000,
+      py: -1000,
+      active: false,
+      down: false,
+      downAt: 0,
+      charge: 0,
+      lastActivity: 0,
+      type: "mouse"
+    },
+
+    time: 0,
+    destroyed: false
+  };
+
+  const random = (min, max) => Math.random() * (max - min) + min;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  function setAccent(hue) {
+    const normalized = ((hue % 360) + 360) % 360;
+    document.documentElement.style.setProperty("--accent", normalized.toFixed(1));
+  }
+
+  function choosePalette(kind = "random") {
+    const palettes = {
+      cyan: 190,
+      blue: 218,
+      violet: 265,
+      pink: 322,
+      gold: 44,
+      green: 145,
+      white: 195
+    };
+
+    if (kind in palettes) {
+      engine.targetHue = palettes[kind];
+    } else {
+      const options = [180, 195, 212, 230, 258, 282, 315, 338, 160, 45];
+      engine.targetHue = options[Math.floor(Math.random() * options.length)] + random(-9, 9);
+    }
+
+    engine.lastPaletteTime = performance.now();
+  }
+
+  function calculateParticleCount() {
+    const area = innerWidth * innerHeight;
+    const density = coarsePointer.matches ? 1 / 9000 : 1 / 7400;
+    const minimum = coarsePointer.matches ? 70 : 85;
+    const maximum = coarsePointer.matches ? 220 : 300;
+
+    let amount = clamp(Math.round(area * density), minimum, maximum);
+
+    if (engine.ultra) {
+      amount = Math.round(amount * 1.55);
+    }
+
+    return clamp(amount, 65, 440);
+  }
+
+  function createParticle(x, y, options = {}) {
+    const angle = random(0, Math.PI * 2);
+    const speed = random(.08, .48);
+
+    return {
+      x: x ?? random(0, engine.width),
+      y: y ?? random(0, engine.height),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+
+      radius: options.radius ?? random(.55, 1.85),
+      alpha: options.alpha ?? random(.18, .85),
+      hueOffset: random(-35, 42),
+      phase: random(0, Math.PI * 2),
+      pulse: random(.35, 1.1),
+      drift: random(.035, .19),
+
+      life: options.life ?? 1,
+      maxLife: options.maxLife ?? 1,
+      temporary: options.temporary ?? false,
+      bright: options.bright ?? false,
+      initialSpeed: speed
+    };
+  }
+
+  function resize() {
+    const oldWidth = engine.width || innerWidth;
+    const oldHeight = engine.height || innerHeight;
+
+    engine.width = innerWidth;
+    engine.height = innerHeight;
+    engine.dpr = Math.min(window.devicePixelRatio || 1, 1.7);
+
+    canvas.width = Math.round(engine.width * engine.dpr);
+    canvas.height = Math.round(engine.height * engine.dpr);
+    canvas.style.width = engine.width + "px";
+    canvas.style.height = engine.height + "px";
+
+    ctx.setTransform(engine.dpr, 0, 0, engine.dpr, 0, 0);
+
+    const scaleX = engine.width / oldWidth;
+    const scaleY = engine.height / oldHeight;
+
+    for (const p of engine.particles) {
+      p.x *= scaleX;
+      p.y *= scaleY;
+    }
+
+    engine.baseCount = calculateParticleCount();
+
+    while (engine.particles.length < engine.baseCount) {
+      engine.particles.push(createParticle());
+    }
+  }
+
+  /* ============================================================
+     INTERACTIONS: SHOCKWAVES, BURSTS AND PARTICLE EXPLOSIONS
+     ============================================================ */
+
+  function createWave(x, y, options = {}) {
+    if (engine.reduced && !options.force) {
+      // Keep a small, accessible visual response under reduced motion.
+      engine.energy = Math.min(100, engine.energy + 3);
+      return;
+    }
+
+    const mega = !!options.mega;
+
+    engine.waves.push({
+      x,
+      y,
+      radius: options.startRadius || 1,
+      maxRadius: options.maxRadius || Math.min(
+        Math.max(engine.width, engine.height) * (mega ? 1.05 : .65),
+        mega ? 1250 : 770
+      ),
+      speed: options.speed || (engine.ultra ? 12 : 6),
+      strength: options.strength || (engine.ultra ? 27 : 15),
+      life: 1,
+      hue: engine.targetHue,
+      mega,
+      width: options.width || (mega ? 3 : 1.5)
+    });
+
+    if (engine.waves.length > 26) {
+      engine.waves.splice(0, engine.waves.length - 26);
+    }
+  }
+
+  function createExplosion(x, y, amount = 35, power = 1) {
+    const maxTotal = engine.ultra ? 750 : 540;
+    const available = Math.max(0, maxTotal - engine.particles.length);
+    const count = Math.min(Math.round(amount), available);
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+
+      // Square-root sampling spreads particles naturally across the burst.
+      const spread = Math.sqrt(Math.random());
+      const speed = random(1.4, 7.4) * power;
+
+      const p = createParticle(x, y, {
+        radius: random(.65, 2.6),
+        alpha: random(.45, 1),
+        life: random(.65, 1.2),
+        maxLife: 1.2,
+        temporary: true,
+        bright: true
+      });
+
+      p.vx = Math.cos(angle) * speed * spread;
+      p.vy = Math.sin(angle) * speed * spread;
+      p.hueOffset = random(-27, 27);
+
+      engine.particles.push(p);
+    }
+
+    const sparkCount = Math.min(engine.ultra ? 80 : 45, Math.round(amount * .65));
+
+    for (let i = 0; i < sparkCount; i++) {
+      const angle = random(0, Math.PI * 2);
+      const speed = random(2.5, 10) * power;
+
+      engine.sparks.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: random(.45, 1.1),
+        size: random(.6, 2),
+        hue: engine.targetHue + random(-30, 30)
+      });
+    }
+
+    if (engine.sparks.length > 240) {
+      engine.sparks.splice(0, engine.sparks.length - 240);
+    }
+  }
+
+  function emitBurst(x, y, power = 1) {
+    const multiplier = engine.ultra ? 1.75 : 1;
+
+    engine.energy = clamp(engine.energy + 23 * power, 0, 100);
+    choosePalette();
+
+    createWave(x, y, {
+      mega: power >= 1.25,
+      strength: 17 * power,
+      maxRadius: Math.min(
+        Math.max(engine.width, engine.height) * (.62 + .15 * Math.min(power, 2)),
+        1250
+      )
+    });
+
+    createExplosion(
+      x,
+      y,
+      (engine.ultra ? 72 : 39) * multiplier * Math.min(power, 2),
+      power
+    );
+
+    // A counter-propagating inner shockwave makes the burst feel layered.
+    if (!engine.reduced) {
+      window.setTimeout(() => {
+        if (engine.destroyed) return;
+
+        createWave(x, y, {
+          startRadius: 12,
+          maxRadius: Math.min(Math.max(engine.width, engine.height) * .45, 600),
+          speed: engine.ultra ? 10 : 5,
+          strength: 12 * power
+        });
+      }, 90);
+    }
+  }
+
+  function chargeBurst(x, y, charge) {
+    const power = 1 + charge / 75;
+
+    engine.energy = clamp(engine.energy + charge * .55, 0, 100);
+    choosePalette();
+
+    // Charged release: expanded wave, radial particles, and secondary rings.
+    createWave(x, y, {
+      mega: true,
+      strength: 22 + charge * .22,
+      speed: 7 + charge * .08,
+      maxRadius: Math.min(
+        Math.max(engine.width, engine.height) * (1 + charge / 180),
+        1500
+      ),
+      width: 2 + charge / 35
+    });
+
+    createExplosion(
+      x,
+      y,
+      (engine.ultra ? 90 : 50) + charge * .9,
+      power
+    );
+
+    if (!engine.reduced) {
+      for (let i = 1; i <= 3; i++) {
+        const delay = i * 85;
+
+        window.setTimeout(() => {
+          if (engine.destroyed) return;
+
+          createWave(x, y, {
+            startRadius: i * 12,
+            maxRadius: Math.min(950, 270 + charge * 6 + i * 80),
+            speed: 5 + i * 1.2,
+            strength: 18 + charge * .16,
+            width: 1 + i * .45
+          });
+        }, delay);
+      }
+    }
+
+    document.body.classList.add("overdrive");
+    window.setTimeout(() => document.body.classList.remove("overdrive"), 720);
+
+    showToast(charge >= 75 ? "Maximum charge released" : "Energy charge released");
+  }
+
+  function interact(x, y, isTouch = false) {
+    engine.pointer.px = engine.pointer.x;
+    engine.pointer.py = engine.pointer.y;
+    engine.pointer.x = x;
+    engine.pointer.y = y;
+    engine.pointer.active = true;
+    engine.pointer.lastActivity = performance.now();
+    engine.pointer.type = isTouch ? "touch" : "mouse";
+
+    emitBurst(x, y, 1);
+
+    if (engine.ultra && !engine.reduced) {
+      createWave(x, y, {
+        mega: true,
+        speed: 10,
+        strength: 13,
+        maxRadius: Math.min(1100, Math.max(engine.width, engine.height) * .95)
+      });
+    }
+  }
+
+  function pointFromEvent(event) {
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  let ignoreNextPointerClick = false;
+
+  window.addEventListener("pointermove", event => {
+    const p = pointFromEvent(event);
+    const pointer = engine.pointer;
+
+    pointer.px = pointer.x;
+    pointer.py = pointer.y;
+    pointer.x = p.x;
+    pointer.y = p.y;
+    pointer.active = true;
+    pointer.lastActivity = performance.now();
+    pointer.type = event.pointerType || "mouse";
+
+    // Dragging carves a stream through the particle field.
+    if (pointer.down && !engine.reduced) {
+      const distance = Math.hypot(pointer.x - pointer.px, pointer.y - pointer.py);
+
+      if (distance > (engine.ultra ? 8 : 17)) {
+        const count = engine.ultra ? 3 : 1;
+
+        for (let i = 0; i < count; i++) {
+          const t = count === 1 ? 0 : i / (count - 1);
+
+          createParticle(
+            pointer.px + (pointer.x - pointer.px) * t,
+            pointer.py + (pointer.y - pointer.py) * t,
+            {
+              radius: random(.7, 1.8),
+              alpha: random(.45, .9),
+              life: random(.35, .8),
+              maxLife: .8,
+              temporary: true,
+              bright: true
+            }
+          );
+        }
+
+        if (engine.particles.length > (engine.ultra ? 740 : 530)) {
+          engine.particles.splice(
+            0,
+            engine.particles.length - (engine.ultra ? 740 : 530)
+          );
+        }
+
+        if (distance > (engine.ultra ? 34 : 52)) {
+          createWave(pointer.x, pointer.y, {
+            maxRadius: engine.ultra ? 125 : 75,
+            speed: engine.ultra ? 8 : 4,
+            strength: 8
+          });
+        }
+
+        engine.energy = Math.min(
+          100,
+          engine.energy + Math.min(distance * .025, 1.6)
+        );
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener("pointerdown", event => {
+    if (event.button !== undefined && event.button !== 0) return;
+
+    const p = pointFromEvent(event);
+    const pointer = engine.pointer;
+
+    pointer.down = true;
+    pointer.downAt = performance.now();
+    pointer.charge = 0;
+    pointer.px = p.x;
+    pointer.py = p.y;
+    pointer.x = p.x;
+    pointer.y = p.y;
+    pointer.active = true;
+    pointer.type = event.pointerType || "mouse";
+    pointer.lastActivity = performance.now();
+
+    // Immediate response makes taps satisfying; holding charges a second burst.
+    createWave(p.x, p.y, {
+      maxRadius: 115,
+      speed: engine.ultra ? 10 : 6,
+      strength: 11
+    });
+
+    engine.energy = Math.min(100, engine.energy + 4);
+  }, { passive: true });
+
+  function releasePointer() {
+    const pointer = engine.pointer;
+
+    if (!pointer.down) return;
+
+    const held = performance.now() - pointer.downAt;
+    const charge = clamp((held / 1250) * 100, 0, 100);
+    const x = pointer.x;
+    const y = pointer.y;
+
+    pointer.down = false;
+    pointer.charge = 0;
+
+    if (held > 430) {
+      chargeBurst(x, y, Math.max(20, charge));
+    } else {
+      // A regular tap releases a small energy pulse.
+      createWave(x, y, {
+        maxRadius: 175,
+        speed: engine.ultra ? 9 : 5,
+        strength: 8
+      });
+
+      engine.energy = Math.min(100, engine.energy + 3);
+    }
+
+    updateEnergyUI();
+  }
+
+  window.addEventListener("pointerup", releasePointer, { passive: true });
+  window.addEventListener("pointercancel", releasePointer, { passive: true });
+
+  window.addEventListener("pointerleave", event => {
+    if (event.target === document.documentElement) {
+      engine.pointer.active = false;
+    }
+  }, { passive: true });
+
+  /* ============================================================
+     ULTRA INSTINCT MODE
+     ============================================================ */
+
+  function activateUltra() {
+    engine.ultra = !engine.ultra;
+    document.body.classList.toggle("ultra-mode", engine.ultra);
+
+    ui.modeButton.setAttribute("aria-pressed", String(engine.ultra));
+
+    if (engine.ultra) {
+      ui.modeButton.textContent = "✧ Ultra Instinct: Active";
+      ui.modeLabel.textContent = "Ultra instinct protocol engaged";
+      ui.subtitle.textContent = "Limiters removed. Energy output increasing.";
+      ui.status.textContent = "Overdrive active";
+
+      choosePalette("white");
+      engine.baseCount = calculateParticleCount();
+
+      // The activation blast launches from the center of the experience.
+      emitBurst(innerWidth / 2, innerHeight / 2, 1.8);
+
+      if (!engine.reduced) {
+        createWave(innerWidth / 2, innerHeight / 2, {
+          mega: true,
+          strength: 29,
+          speed: 11,
+          maxRadius: Math.min(1400, Math.max(innerWidth, innerHeight) * 1.5),
+          width: 3
+        });
+      }
+
+      showToast("Ultra Instinct activated");
+    } else {
+      ui.modeButton.textContent = "✧ Activate Ultra Instinct";
+      ui.modeLabel.textContent = "Temporal countdown sequence";
+      ui.subtitle.textContent = "One deadline. Infinite possibilities.";
+      ui.status.textContent = "System online";
+
+      choosePalette("cyan");
+      engine.baseCount = calculateParticleCount();
+
+      createWave(innerWidth / 2, innerHeight / 2, {
+        maxRadius: 390,
+        speed: 5,
+        strength: 9
+      });
+
+      showToast("Energy limiters restored");
+    }
+
+    window.setTimeout(resize, 0);
+  }
+
+  ui.modeButton.addEventListener("click", activateUltra);
+
+  ui.burstButton.addEventListener("click", () => {
+    const x = engine.pointer.active ? engine.pointer.x : innerWidth / 2;
+    const y = engine.pointer.active ? engine.pointer.y : innerHeight / 2;
+
+    emitBurst(x, y, engine.ultra ? 2 : 1.25);
+    showToast(engine.ultra ? "Ultra energy detonated" : "Energy burst released");
+  });
+
+  ui.pauseButton.addEventListener("click", () => {
+    engine.running = !engine.running;
+
+    if (engine.running) {
+      ui.pauseButton.textContent = "Ⅱ";
+      ui.pauseButton.setAttribute("aria-label", "Pause particle animations");
+      ui.pauseButton.setAttribute("aria-pressed", "false");
+      document.body.classList.remove("motion-paused");
+      showToast("Particle field resumed");
+      startAnimation();
+    } else {
+      ui.pauseButton.textContent = "▶";
+      ui.pauseButton.setAttribute("aria-label", "Resume particle animations");
+      ui.pauseButton.setAttribute("aria-pressed", "true");
+      document.body.classList.add("motion-paused");
+
+      if (engine.raf) {
+        cancelAnimationFrame(engine.raf);
+        engine.raf = 0;
+      }
+
+      showToast("Particle field paused");
+    }
+  });
+
+  ui.timer.addEventListener("click", event => {
+    const unit = event.target.closest(".time-unit");
+    if (!unit) return;
+
+    const rect = unit.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+
+    choosePalette();
+    createWave(x, y, {
+      mega: false,
+      maxRadius: Math.min(Math.max(innerWidth, innerHeight) * .72, 780),
+      speed: engine.ultra ? 9 : 5,
+      strength: engine.ultra ? 22 : 12
+    });
+
+    engine.energy = Math.min(100, engine.energy + 8);
+
+    // Countdown digits become the epicenter of a local energy pulse.
+    if (engine.ultra && !engine.reduced) {
+      createExplosion(x, y, 25, 1.2);
+    }
+  });
+
+  /* ============================================================
+     PARTICLE PHYSICS
+     ============================================================ */
+
+  function updateParticle(p, dt, time) {
+    p.phase += p.pulse * dt;
+
+    const decay = Math.pow(engine.ultra ? .996 : .991, dt * 60);
+    p.vx *= decay;
+    p.vy *= decay;
+
+    // Low-frequency drift produces a fluid, living field.
+    p.vx += Math.sin(time * .00024 + p.phase) * p.drift * dt;
+    p.vy += Math.cos(time * .00021 + p.phase * 1.31) * p.drift * dt;
+
+    const pointer = engine.pointer;
+
+    if (pointer.active) {
+      const dx = pointer.x - p.x;
+      const dy = pointer.y - p.y;
+      const d2 = dx * dx + dy * dy;
+      const radius = engine.ultra ? 235 : 165;
+
+      if (d2 > 1 && d2 < radius * radius) {
+        const distance = Math.sqrt(d2);
+        const closeness = 1 - distance / radius;
+
+        if (pointer.down) {
+          // A held pointer repels particles; Ultra mode adds a vortex.
+          const force = (engine.ultra ? -.30 : -.23) * closeness * dt;
+
+          p.vx -= (dx / distance) * force * 14;
+          p.vy -= (dy / distance) * force * 14;
+
+          const tangent = Math.atan2(dy, dx) + Math.PI / 2;
+          const swirl = (engine.ultra ? .11 : .035) * closeness * dt;
+
+          p.vx += Math.cos(tangent) * swirl;
+          p.vy += Math.sin(tangent) * swirl;
+        } else {
+          // Hover attraction.
+          const force = (engine.ultra ? .08 : .027) * closeness * dt;
+
+          p.vx += (dx / distance) * force;
+          p.vy += (dy / distance) * force;
+
+          if (engine.ultra) {
+            const angle = Math.atan2(dy, dx) + Math.PI / 2;
+            p.vx += Math.cos(angle) * closeness * .024 * dt;
+            p.vy += Math.sin(angle) * closeness * .024 * dt;
+          }
+        }
+      }
+    }
+
+    // The expanding shockwave pushes the nearby field outwards.
+    if (!engine.reduced) {
+      for (const wave of engine.waves) {
+        const dx = p.x - wave.x;
+        const dy = p.y - wave.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 1) continue;
+
+        const difference = Math.abs(dist - wave.radius);
+        const band = wave.mega ? 27 : 19;
+
+        if (difference < band) {
+          const influence = (1 - difference / band) * wave.life;
+          const impulse = wave.strength * influence * dt * .055;
+
+          p.vx += (dx / dist) * impulse;
+          p.vy += (dy / dist) * impulse;
+        }
+      }
+    }
+
+    if (p.temporary) {
+      p.life -= dt / Math.max(.6, p.maxLife);
+      p.vx *= Math.pow(.984, dt * 60);
+      p.vy *= Math.pow(.984, dt * 60);
+    }
+
+    const speed = Math.hypot(p.vx, p.vy);
+    const maxSpeed = p.temporary ? (engine.ultra ? 13 : 9) : (engine.ultra ? 2.2 : 1.2);
+
+    if (speed > maxSpeed) {
+      p.vx = p.vx / speed * maxSpeed;
+      p.vy = p.vy / speed * maxSpeed;
+    }
+
+    // Ultra mode adds a subtle rotational flow around the screen center.
+    if (engine.ultra && !p.temporary) {
+      const dx = p.x - engine.width / 2;
+      const dy = p.y - engine.height / 2;
+      const distance = Math.hypot(dx, dy) + .001;
+      const vortex = .000065 * dt;
+
+      p.vx += (-dy / distance) * vortex * Math.min(distance, 700);
+      p.vy += (dx / distance) * vortex * Math.min(distance, 700);
+    }
+
+    if (!engine.reduced) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+
+    const margin = 12;
+
+    if (p.x < -margin) p.x = engine.width + margin;
+    else if (p.x > engine.width + margin) p.x = -margin;
+
+    if (p.y < -margin) p.y = engine.height + margin;
+    else if (p.y > engine.height + margin) p.y = -margin;
+
+    return !p.temporary || p.life > 0;
+  }
+
+  /* ============================================================
+     DRAWING: PARTICLES, CONNECTIONS, WAVEFRONTS AND TRAILS
+     ============================================================ */
+
+  function drawConnectionLines() {
+    const cellSize = 105;
+    const columns = Math.max(1, Math.ceil(engine.width / cellSize));
+    const rows = Math.max(1, Math.ceil(engine.height / cellSize));
+
+    const grid = new Map();
+
+    for (let i = 0; i < engine.particles.length; i++) {
+      const p = engine.particles[i];
+      const col = clamp(Math.floor(p.x / cellSize), 0, columns - 1);
+      const row = clamp(Math.floor(p.y / cellSize), 0, rows - 1);
+      const key = row * columns + col;
+
+      let bucket = grid.get(key);
+
+      if (!bucket) {
+        bucket = [];
+        grid.set(key, bucket);
+      }
+
+      bucket.push({ p, i });
+    }
+
+    const maxDist = engine.ultra ? 132 : 109;
+    const maxDist2 = maxDist * maxDist;
+
+    ctx.lineWidth = engine.ultra ? .85 : .65;
+
+    for (const [key, bucket] of grid) {
+      const col = key % columns;
+      const row = Math.floor(key / columns);
+
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          const nc = col + ox;
+          const nr = row + oy;
+
+          if (nc < 0 || nc >= columns || nr < 0 || nr >= rows) continue;
+
+          const otherKey = nr * columns + nc;
+
+          // Process neighboring cell pairs exactly once.
+          if (otherKey < key) continue;
+
+          const other = grid.get(otherKey);
+          if (!other) continue;
+
+          for (let ai = 0; ai < bucket.length; ai++) {
+            const a = bucket[ai];
+
+            for (let bi = 0; bi < other.length; bi++) {
+              const b = other[bi];
+
+              if (otherKey === key && b.i <= a.i) continue;
+
+              // Bursting particles get their individual trails instead of
+              // adding too many crossing lines to the background.
+              if ((a.p.temporary || b.p.temporary) && !engine.ultra) continue;
+
+              const dx = b.p.x - a.p.x;
+              const dy = b.p.y - a.p.y;
+              const d2 = dx * dx + dy * dy;
+
+              if (d2 >= maxDist2) continue;
+
+              const dist = Math.sqrt(d2);
+              const proximity = 1 - dist / maxDist;
+              const alpha = proximity * (engine.ultra ? .21 : .13) *
+                Math.min(a.p.alpha, b.p.alpha);
+
+              const hue = engine.hue + (a.p.hueOffset + b.p.hueOffset) / 2;
+
+              ctx.strokeStyle = `hsla(${hue}, 90%, ${engine.ultra ? 82 : 74}%, ${alpha})`;
+
+              ctx.beginPath();
+              ctx.moveTo(a.p.x, a.p.y);
+              ctx.lineTo(b.p.x, b.p.y);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function drawParticles(time) {
+    for (const p of engine.particles) {
+      const pulse = .72 + .28 * Math.sin(p.phase + time * .0004);
+      const fade = p.temporary ? clamp(p.life / .35, 0, 1) : 1;
+      const alpha = p.alpha * pulse * fade;
+      const hue = engine.hue + p.hueOffset;
+      const radius = p.radius * (p.temporary ? 1 + (1 - fade) * .35 : 1);
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(.3, radius), 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, ${p.bright ? 100 : 88}%, ${p.bright ? 86 : 77}%, ${alpha})`;
+      ctx.fill();
+
+      if (engine.ultra && radius > 1.25) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius * 4.7, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${hue}, 100%, 75%, ${alpha * .047})`;
+        ctx.fill();
+      } else if (radius > 1.4) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius * 3.1, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${hue}, 100%, 75%, ${alpha * .055})`;
+        ctx.fill();
+      }
+
+      // Kinetic tails become more visible during bursts and drags.
+      const speed = Math.hypot(p.vx, p.vy);
+
+      if (speed > (engine.ultra ? .55 : 1.25)) {
+        const tail = engine.ultra ? 8 : 4;
+
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * tail, p.y - p.vy * tail);
+
+        ctx.strokeStyle = `hsla(${hue}, 100%, 78%, ${alpha * .46})`;
+        ctx.lineWidth = p.temporary ? 1.3 : .65;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawWaves(dt) {
+    for (let i = engine.waves.length - 1; i >= 0; i--) {
+      const wave = engine.waves[i];
+
+      wave.radius += wave.speed * dt;
+      wave.life = clamp(1 - wave.radius / wave.maxRadius, 0, 1);
+
+      if (wave.life <= 0) {
+        engine.waves.splice(i, 1);
+        continue;
+      }
+
+      const alpha = wave.life * (wave.mega ? .48 : .32);
+      const hue = wave.hue;
+
+      // Main wavefront.
+      ctx.beginPath();
+      ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+      ctx.lineWidth = wave.width;
+      ctx.strokeStyle = `hsla(${hue}, 100%, ${engine.ultra ? 84 : 74}%, ${alpha})`;
+      ctx.stroke();
+
+      // Inner spectral wavefront.
+      if (wave.radius > 18) {
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, Math.max(1, wave.radius - 11), 0, Math.PI * 2);
+        ctx.lineWidth = .8;
+        ctx.strokeStyle = `hsla(${hue + 25}, 100%, 75%, ${alpha * .36})`;
+        ctx.stroke();
+      }
+
+      if (wave.mega && wave.radius > 35) {
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, wave.radius + 9, 0, Math.PI * 2);
+        ctx.lineWidth = .65;
+        ctx.strokeStyle = `hsla(${hue + 48}, 100%, 83%, ${alpha * .23})`;
+        ctx.stroke();
+      }
+
+      // Soft light leaking from the wave's center.
+      if (wave.life > .28) {
+        const radius = (engine.ultra ? 33 : 24) * wave.life;
+
+        const gradient = ctx.createRadialGradient(
+          wave.x, wave.y, 0,
+          wave.x, wave.y, radius
+        );
+
+        gradient.addColorStop(0, `hsla(${hue}, 100%, 82%, ${wave.life * .18})`);
+        gradient.addColorStop(.36, `hsla(${hue}, 100%, 65%, ${wave.life * .05})`);
+        gradient.addColorStop(1, "transparent");
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawSparks(dt) {
+    for (let i = engine.sparks.length - 1; i >= 0; i--) {
+      const s = engine.sparks[i];
+
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vx *= Math.pow(.967, dt * 60);
+      s.vy *= Math.pow(.967, dt * 60);
+      s.life -= .019 * dt;
+
+      if (s.life <= 0) {
+        engine.sparks.splice(i, 1);
+        continue;
+      }
+
+      const alpha = clamp(s.life, 0, 1);
+
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - s.vx * 2.4, s.y - s.vy * 2.4);
+      ctx.strokeStyle = `hsla(${s.hue}, 100%, 84%, ${alpha})`;
+      ctx.lineWidth = s.size;
+      ctx.stroke();
+    }
+  }
+
+  function drawPointerField() {
+    const pointer = engine.pointer;
+
+    if (!pointer.active || pointer.down) return;
+
+    const radius = engine.ultra ? 155 : 105;
+
+    const gradient = ctx.createRadialGradient(
+      pointer.x, pointer.y, 0,
+      pointer.x, pointer.y, radius
+    );
+
+    gradient.addColorStop(0, `hsla(${engine.hue}, 100%, 76%, ${engine.ultra ? .105 : .065})`);
+    gradient.addColorStop(.35, `hsla(${engine.hue}, 100%, 68%, .025)`);
+    gradient.addColorStop(1, "transparent");
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(pointer.x, pointer.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (engine.ultra && !engine.reduced) {
+      const rotation = performance.now() * .00055;
+      const orbitRadius = 22 + Math.sin(performance.now() * .003) * 5;
+
+      ctx.beginPath();
+      ctx.ellipse(
+        pointer.x, pointer.y,
+        orbitRadius * 1.6, orbitRadius * .65,
+        rotation, 0, Math.PI * 2
+      );
+      ctx.strokeStyle = `hsla(${engine.hue}, 100%, 80%, .42)`;
+      ctx.lineWidth = .8;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(
+        pointer.x, pointer.y,
+        orbitRadius * .65, orbitRadius * 1.6,
+        -rotation, 0, Math.PI * 2
+      );
+      ctx.strokeStyle = `hsla(${engine.hue + 40}, 100%, 82%, .23)`;
+      ctx.stroke();
+    }
+  }
+
+  function drawUltraAura(time) {
+    if (!engine.ultra) return;
+
+    const x = engine.width / 2;
+    const y = engine.height / 2;
+    const radius = Math.min(engine.width, engine.height) * .39;
+    const pulse = 1 + .025 * Math.sin(time * .0017);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(time * .00004);
+
+    // Large, subdued reactor ring behind the glass panel.
+    for (let ring = 0; ring < 3; ring++) {
+      ctx.beginPath();
+
+      ctx.ellipse(
+        0, 0,
+        radius * pulse * (1 + ring * .16),
+        radius * pulse * (.88 + ring * .12),
+        ring * .35,
+        ring * .13,
+        Math.PI * (1.48 + ring * .07)
+      );
+
+      ctx.strokeStyle = `hsla(${engine.hue + ring * 27}, 100%, 75%, ${.12 / (ring + 1)})`;
+      ctx.lineWidth = ring === 0 ? 1.1 : .65;
+      ctx.stroke();
+    }
+
+    // Rotating orbit dashes.
+    const orbitRadius = radius * 1.18;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, orbitRadius, time * .0004, time * .0004 + Math.PI * .72);
+    ctx.strokeStyle = `hsla(${engine.hue + 55}, 100%, 82%, .23)`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, orbitRadius * .9, -time * .00028, -time * .00028 + Math.PI * .42);
+    ctx.strokeStyle = `hsla(${engine.hue - 35}, 100%, 80%, .18)`;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ============================================================
+     ENERGY GAUGE
+     ============================================================ */
+
+  function updateEnergyUI() {
+    const charge = engine.pointer.down
+      ? clamp((performance.now() - engine.pointer.downAt) / 1250 * 100, 0, 100)
+      : engine.energy;
+
+    ui.energy.style.width = clamp(charge, 0, 100).toFixed(1) + "%";
+    ui.energyValue.textContent = Math.round(charge).toString().padStart(2, "0") + "%";
+  }
+
+  /* ============================================================
+     ANIMATION LOOP
+     ============================================================ */
+
+  function render(timestamp) {
+    engine.raf = 0;
+
+    if (engine.destroyed || !engine.running || !engine.visible) return;
+
+    const delta = engine.lastFrame
+      ? clamp((timestamp - engine.lastFrame) / 16.667, .15, 2.2)
+      : 1;
+
+    engine.lastFrame = timestamp;
+    engine.time += delta;
+    engine.frameCount++;
+
+    // Keep long-term motion and color updates stable after tab switching.
+    if (engine.ultra) {
+      if (timestamp - engine.lastPaletteTime > 3000) {
+        engine.targetHue = 190 + Math.sin(timestamp * .00025) * 35;
+      }
+    } else if (timestamp - engine.lastPaletteTime > 15000) {
+      // Deadline urgency slowly warms the normal palette.
+      const remaining = Math.max(0, TARGET - Date.now());
+      const total = Math.max(1, TARGET - CONTRACT_START);
+      engine.targetHue = 195 - (1 - remaining / total) * 70;
+    }
+
+    const hueDifference = ((engine.targetHue - engine.hue + 540) % 360) - 180;
+    engine.hue += hueDifference * Math.min(1, .018 * delta);
+
+    if (engine.frameCount % 3 === 0) setAccent(engine.hue);
+
+    // Energy gradually dissipates, while held interactions recharge it.
+    if (!engine.pointer.down) {
+      engine.energy = Math.max(7, engine.energy - .022 * delta);
+    } else {
+      const heldFor = timestamp - engine.pointer.downAt;
+      engine.pointer.charge = clamp(heldFor / 1250 * 100, 0, 100);
+      engine.energy = Math.max(engine.energy, engine.pointer.charge);
+    }
+
+    updateEnergyUI();
+
+    /*
+      Fade old pixels instead of clearing everything instantly.
+      This produces a subtle particle-trail persistence without
+      leaving permanent marks on the canvas.
+    */
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = engine.ultra ? "rgba(0, 0, 0, .18)" : "rgba(0, 0, 0, .24)";
+    ctx.fillRect(0, 0, engine.width, engine.height);
+    ctx.globalCompositeOperation = "source-over";
+
+    // Replenish the background field after temporary particles expire.
+    while (engine.particles.length < engine.baseCount) {
+      engine.particles.push(createParticle());
+    }
+
+    const reducedDt = engine.reduced ? Math.min(delta, .25) : delta;
+
+    engine.particles = engine.particles.filter(p => updateParticle(p, reducedDt, timestamp));
+
+    drawUltraAura(timestamp);
+    drawConnectionLines();
+    drawParticles(timestamp);
+
+    if (!engine.reduced) {
+      drawWaves(delta);
+      drawSparks(delta);
+      drawPointerField();
+    }
+
+    engine.raf = requestAnimationFrame(render);
+  }
+
+  function startAnimation() {
+    if (engine.destroyed || !engine.running || !engine.visible || engine.raf) return;
+
+    engine.lastFrame = 0;
+    engine.raf = requestAnimationFrame(render);
+  }
+
+  /* ============================================================
+     KEYBOARD SHORTCUTS
+     U = toggle Ultra Instinct
+     B = energy burst
+     P = pause/resume particle field
+     ============================================================ */
+
+  window.addEventListener("keydown", event => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+    const target = event.target;
+    const isButton = target && target.closest && target.closest("button");
+
+    if (isButton || target?.isContentEditable) return;
+
+    if (event.key.toLowerCase() === "u") {
+      activateUltra();
+    } else if (event.key.toLowerCase() === "b") {
+      emitBurst(innerWidth / 2, innerHeight / 2, engine.ultra ? 2 : 1.3);
+    } else if (event.key.toLowerCase() === "p") {
+      ui.pauseButton.click();
+    }
+  });
+
+  /* ============================================================
+     VISIBILITY, RESIZING AND STARTUP
+     ============================================================ */
+
+  let resizeTimer = 0;
+
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+
+    resizeTimer = window.setTimeout(() => {
+      resize();
+      startAnimation();
+    }, 100);
+  }, { passive: true });
+
+  document.addEventListener("visibilitychange", () => {
+    engine.visible = !document.hidden;
+
+    if (!engine.visible) {
+      if (engine.raf) {
+        cancelAnimationFrame(engine.raf);
+        engine.raf = 0;
+      }
+
+      engine.lastFrame = 0;
+    } else {
+      updateCountdown();
+      startAnimation();
+    }
+  });
+
+  reducedMotion.addEventListener("change", event => {
+    engine.reduced = event.matches;
+
+    if (engine.reduced) {
+      engine.waves.length = 0;
+      engine.sparks.length = 0;
+    }
+
+    showToast(
+      engine.reduced
+        ? "Reduced-motion mode enabled"
+        : "Full animation mode enabled"
+    );
+  });
+
+  window.addEventListener("pagehide", () => {
+    engine.destroyed = true;
+
+    if (engine.raf) cancelAnimationFrame(engine.raf);
+
+    window.clearInterval(countdownInterval);
+    window.clearTimeout(resizeTimer);
+    window.clearTimeout(toastTimeout);
+  }, { once: true });
+
+  resize();
+
+  // Opening sequence: two gentle rings and a living star field.
+  if (!engine.reduced) {
+    createWave(innerWidth / 2, innerHeight / 2, {
+      maxRadius: Math.min(440, Math.max(innerWidth, innerHeight) * .45),
+      speed: 3.4,
+      strength: 4,
+      width: 1
+    });
+
+    window.setTimeout(() => {
+      if (engine.destroyed) return;
+
+      createWave(innerWidth / 2, innerHeight / 2, {
+        maxRadius: Math.min(350, Math.max(innerWidth, innerHeight) * .38),
+        speed: 2.7,
+        strength: 3,
+        width: .7
+      });
+    }, 550);
+  }
+
+  startAnimation();
+})();
+</script>
+</body>
+</html>
